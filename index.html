@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Personal Finance App</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* CSS was here */
+  </style>
+</head>
+<body>
+  <header>
+    <button id="hamburgerMenu" class="hamburger-button" aria-label="Open menu">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+    </button>
+    <span class="app-title">Finance Tracker</span>
+  </header>
+
+  <div id="sidebarNav" class="sidebar">
+    <button class="closebtn" onclick="closeNav()" aria-label="Close menu">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+    </button>
+    <button class="menu-tab-button" data-tabid="budget" onclick="showTab(event, 'budget', true)">🎯 Budget Planner</button>
+    <button class="menu-tab-button" data-tabid="creditcard" onclick="showTab(event, 'creditcard', true)">💳 Credit Cards</button>
+    <button class="menu-tab-button" data-tabid="loanDetails" onclick="showTab(event, 'loanDetails', true)">🔗 Loan Details</button>
+    <button class="menu-tab-button" data-tabid="settings" onclick="showTab(event, 'settings', true)">⚙️ Settings</button>
+  </div>
+  <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeNav()"></div>
+
+  <div id="formPopupOverlay" class="form-popup-overlay">
+    <div id="fabActionSelectPopup" class="popup-form hidden" style="max-width: 300px;">
+        <button class="popup-close-btn" onclick="closeFormPopup()">×</button>
+        <h3>Add New</h3>
+        <button id="fabAddExpenseBtn" class="fab-action-btn">Add Expense</button>
+        <button id="fabAddIncomeBtn" class="fab-action-btn">Add Income</button>
+        <button class="fab-action-btn cancel" onclick="closeFormPopup()">Cancel</button>
+    </div>
+    <form id="addAccountForm" class="popup-form hidden">
+        <button class="popup-close-btn" onclick="closeFormPopup()">×</button>
+        <h3>Add Bank Account</h3>
+        <input type="text" id="accountNameInput" placeholder="Account Name (e.g., SBI Savings, Cash Wallet)" required />
+        <input type="number" id="initialBalanceInput" placeholder="Current Balance" step="0.01" required />
+        <button type="submit">Add Account</button>
+    </form>
+    <form id="transactionForm" class="popup-form hidden">
+      <button class="popup-close-btn" onclick="closeFormPopup()">×</button>
+      <h3 id="expenseFormTitle">Add Expense</h3>
+      <input type="date" id="transactionDateInput" required />
+      <select id="transactionCategoryInput" required onchange="updateSubcategoryDropdown()">
+        <option value="">Category</option>
+        <option value="Need">⚠️ Need</option>
+        <option value="Want">🛍️ Want</option>
+        <option value="Savings">💰 Savings/Inv.</option>
+      </select>
+      <select id="transactionSubcategoryInput" required><option value="">Subcategory</option></select>
+      <input type="number" id="transactionAmountInput" placeholder="Amount" step="0.01" min="0.01" required />
+      <select id="paymentMethodInput" required onchange="updatePaymentSourceDropdown()">
+          <option value="">Payment Method</option>
+          <option value="Cash">Cash (Un-tracked Pool)</option>
+          <option value="BankAccount">Bank Account / Tracked Cash</option>
+          <option value="CreditCard">Credit Card</option>
+      </select>
+      <div id="paymentSourceWrapper" class="hidden"><select id="paymentSourceInput"><option value="">Source</option></select></div>
+      <input type="text" id="transactionRemarksInput" placeholder="Remarks" />
+      <button type="submit" id="expenseFormSubmitBtn">Add Expense</button>
+    </form>
+    <form id="incomeForm" class="popup-form hidden">
+      <button class="popup-close-btn" onclick="closeFormPopup()">×</button>
+      <h3 id="incomeFormTitle">Add Income</h3>
+       <input type="date" id="incomeDateInput" required /> <!-- Added date for income -->
+      <select id="incomeAccountSelect" required><option value="">Account to Credit</option></select>
+      <input type="text" id="incomeSourceInput" placeholder="Income Source" required />
+      <input type="number" id="incomeAmountInput" placeholder="Amount" step="0.01" min="0.01" required />
+      <button type="submit" id="incomeFormSubmitBtn">Add Income</button>
+    </form>
+    <form id="budgetForm" class="popup-form hidden">
+      <button class="popup-close-btn" onclick="closeFormPopup()">×</button>
+      <h3>Add Budget Item</h3>
+      <select id="budgetCategory" required onchange="updateBudgetSubcategoryOptions()">
+        <option value="">-- Select Main Category --</option>
+        <option value="Need">⚠️ Need</option>
+        <option value="Want">🛍️ Want</option>
+        <option value="Savings">💰 Savings & Investment</option>
+      </select>
+      <select id="budgetSubcategorySelect" required onchange="handleBudgetSubcategoryChange()">
+        <option value="">-- Select Subcategory --</option>
+      </select>
+      <input type="text" id="budgetSubcategoryOtherInput" class="hidden" placeholder="Enter Other Subcategory" />
+      <input type="number" id="budgetAmount" placeholder="Target Amount" step="0.01" min="0.01" required />
+      <button type="submit">Add Budget Item</button>
+    </form>
+    <form id="cardForm" class="popup-form hidden">
+        <button class="popup-close-btn" onclick="closeFormPopup()">×</button>
+        <h3>Add Credit Card</h3>
+        <input type="text" id="cardNameInput" placeholder="Card Name (e.g., HDFC Visa)" required />
+        <input type="number" id="cardLimitInput" placeholder="Credit Limit" step="0.01" min="0" required />
+        <input type="number" id="cardInitialOutstandingInput" placeholder="Current Outstanding" step="0.01" min="0" required />
+        <button type="submit">Add Card</button>
+    </form>
+    <form id="loanDetailsForm" class="popup-form hidden">
+        <button class="popup-close-btn" onclick="closeFormPopup()">×</button>
+        <h3>Add Loan Details</h3>
+        <input type="text" id="loanLenderName" placeholder="Lender / Loan Description" required />
+        <input type="number" id="loanTotalAmount" placeholder="Total Loan Amount" step="0.01" min="0.01" required />
+        <input type="number" id="loanInterestRate" placeholder="Interest Rate (%) (Optional)" step="0.01" min="0" />
+        <h4>EMI Details</h4>
+        <input type="number" id="loanEmiAmount" placeholder="EMI Amount (e.g., 5000)" step="0.01" min="0.01" required />
+        <input type="number" id="loanTotalEmis" placeholder="Total No. of EMIs (e.g., 24)" step="1" min="1" required />
+        <input type="number" id="loanEmisPaid" placeholder="No. of EMIs Paid (e.g., 5)" step="1" min="0" required />
+        <button type="submit">Add Loan</button>
+    </form>
+    <div id="loanDetailPopup" class="popup-form hidden">
+        <button class="popup-close-btn" onclick="closeFormPopup()">×</button>
+        <h3 id="loanDetailPopupTitle">Loan Details</h3>
+        <div id="loanDetailPopupContent"></div>
+    </div>
+  </div>
+
+  <div id="dashboard" class="tab-content active">
+    <h2>📊 Dashboard</h2>
+    <div class="dashboard-summary-grid">
+        <div class="dashboard-box summary-item">
+            <span class="summary-value"><span id="totalIncomeDisplay" class="amount-income">₹0.00</span></span>
+            <span class="summary-label">Total Income (All Time)</span>
+        </div>
+        <div class="dashboard-box summary-item">
+            <span class="summary-value"><span id="totalBankBalance">₹0.00</span></span>
+            <span class="summary-label">Bank Balance (Current)</span>
+        </div>
+        <div class="dashboard-box summary-item">
+            <span class="summary-value"><span id="totalExpenses" class="amount-expense">-₹0.00</span></span>
+            <span class="summary-label">Total Expenses (All Time)</span>
+        </div>
+    </div>
+    <div class="dashboard-box">
+        <h3 id="monthlyOverviewTitle">Monthly Overview</h3> <!-- Title will be updated by JS -->
+        <div style="height: 200px; position: relative;">
+            <canvas id="monthlyChart"></canvas>
+        </div>
+    </div>
+    <hr>
+    <div class="dashboard-box">Need: ₹<span id="needTotal">0.00</span><div class="progress-bar"><div id="needProgress" class="progress-fill"></div></div></div>
+    <div class="dashboard-box">Want: ₹<span id="wantTotal">0.00</span><div class="progress-bar"><div id="wantProgress" class="progress-fill"></div></div></div>
+    <div class="dashboard-box">Savings: ₹<span id="savingsTotal">0.00</span><div class="progress-bar"><div id="savingsProgress" class="progress-fill"></div></div></div>
+    <hr>
+
+    <div class="dashboard-box">
+        <h3>📅 Recent Activity (Last 10 Overall)</h3>
+        <div class="recent-activity-filters">
+            <button class="activity-filter-btn active" data-filter="all">All</button>
+            <button class="activity-filter-btn" data-filter="expenses">Expenses</button>
+            <button class="activity-filter-btn" data-filter="income">Income</button>
+        </div>
+        <div id="recentTransactionsList" class="recent-transactions-list">
+            <!-- Transactions will be listed here -->
+        </div>
+        <p id="noRecentActivityMessage" class="no-recent-activity-message hidden">No recent activity to display.</p>
+    </div>
+  </div>
+
+  <div id="accounts" class="tab-content">
+    <h2>🏦 Bank Accounts & Tracked Cash</h2>
+    <p style="font-size: 0.85rem; color: #555; margin-bottom: 1rem;">
+        Tip: To track physical cash (e.g., in your wallet), add it here as an account (e.g., "Cash Wallet").
+        When spending this cash, choose "Bank Account / Tracked Cash" as the payment method and select your "Cash Wallet" as the source.
+        The "Cash (Un-tracked Pool)" payment method is for general cash expenses not tied to a specific tracked balance.
+    </p>
+    <div id="accountsTableWrapper" class="table-responsive-wrapper initially-hidden">
+      <h3>View Accounts</h3>
+      <table><thead><tr><th>Account Name</th><th>Current Balance</th><th>Actions</th></tr></thead><tbody id="accountsTableBody"></tbody></table>
+    </div>
+    <p id="noAccountsMessage" class="no-items-message hidden">No bank accounts or tracked cash wallets added yet. Click the '+' button to add one.</p>
+  </div>
+
+  <div id="transactions" class="tab-content">
+    <!-- Month Navigator will be prepended here by JS -->
+    <h2>💸 Transaction Log</h2>
+    <div id="expenseTransactionsWrapper" class="table-responsive-wrapper initially-hidden">
+      <h3>Expense Transactions</h3>
+      <table><thead><tr><th>Date</th><th>Category</th><th>Subcat.</th><th>Amount</th><th>Method</th><th>Source</th><th>Remarks</th><th>Actions</th></tr></thead><tbody id="transactionTableBody"></tbody></table>
+    </div>
+    <div id="incomeLogWrapper" class="table-responsive-wrapper initially-hidden">
+      <h3>Income Log</h3>
+      <table><thead><tr><th>Date</th><th>Account</th><th>Source</th><th>Amount</th><th>Actions</th></tr></thead><tbody id="incomeLogTableBody"></tbody></table>
+    </div>
+    <p id="noTransactionsMessage" class="no-items-message hidden">No transactions for the selected month.</p>
+  </div>
+
+  <div id="budget" class="tab-content">
+    <!-- Month Navigator will be prepended here by JS -->
+    <h2>🎯 Budget Planner</h2>
+    <div id="budgetTableWrapper" class="table-responsive-wrapper initially-hidden">
+      <h3>Budget Overview</h3>
+      <table><thead><tr><th>Category</th><th>Subcategory</th><th>Target</th><th>Spent (This Month)</th><th>Remaining</th><th>Progress</th><th>Actions</th></tr></thead><tbody id="budgetTableBody"></tbody></table>
+    </div>
+    <p id="noBudgetItemsMessage" class="no-items-message hidden">No budget items created yet. Click the '+' button to add one.</p>
+  </div>
+
+  <div id="creditcard" class="tab-content">
+    <h2>💳 Credit Cards</h2>
+    <div id="creditCardsTableWrapper" class="table-responsive-wrapper initially-hidden">
+      <h3>Card Overview</h3>
+      <table><thead><tr><th>Card Name</th><th>Limit</th><th>Outstanding</th><th>Available</th><th>Actions</th></tr></thead><tbody id="cardTableBody"></tbody></table>
+    </div>
+    <p id="noCreditCardsMessage" class="no-items-message hidden">No credit cards added yet. Click the '+' button to add one.</p>
+  </div>
+
+  <div id="loanDetails" class="tab-content">
+    <h2>🔗 Loan Details</h2>
+    <div id="loanCardContainer">
+        <!-- Loan cards will be appended here by JavaScript -->
+    </div>
+    <p id="noLoanDetailsMessage" class="no-items-message hidden">No loans logged yet. Click the '+' button to add one.</p>
+  </div>
+
+  <div id="settings" class="tab-content">
+    <h2>⚙️ Settings</h2>
+
+    <div class="settings-section">
+      <h3>Appearance</h3>
+
+      <div class="setting-item">
+        <label for="themeColorPicker">Theme Color:</label>
+        <div id="themeColorOptions">
+          <!-- Color swatches will be added here by JS -->
+        </div>
+        <input type="color" id="customThemeColorPicker" title="Custom Color">
+      </div>
+
+      <div class="setting-item">
+        <label for="darkModeToggle">Dark Mode:</label>
+        <button id="darkModeToggle" class="toggle-switch" aria-label="Toggle Dark Mode">
+          <span class="toggle-slider"></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Data Management</h3>
+      <div class="setting-item">
+        <button id="exportDataBtn" class="settings-action-btn">Export All Data</button>
+        <p class="setting-description">Download all your financial data and settings as a JSON file.</p>
+      </div>
+      <div class="setting-item">
+        <button id="resetDataBtn" class="settings-action-btn danger">Reset All Data</button>
+        <p class="setting-description">Warning: This will permanently delete all your financial data from this browser. Settings will be preserved.</p>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="tabs">
+    <button class="tab-button active" data-tabid="dashboard" onclick="showTab(event,'dashboard')"><svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg><span>Dash</span></button>
+    <button class="tab-button" data-tabid="transactions" onclick="showTab(event,'transactions')"><svg viewBox="0 0 24 24"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.9-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.9 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg><span>Transaction</span></button>
+    <button class="tab-button" data-tabid="accounts" onclick="showTab(event,'accounts')"><svg viewBox="0 0 24 24"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M4 10h3v7H4zM10.5 10h3v7h-3zM2 19h20v3H2zM17 10h3v7h-3zM12 1L2 6v2h20V6z"/></svg><span>Accounts</span></button>
+  </div>
+  <button id="fab" class="fab-button hidden-fab"><svg viewBox="0 0 24 24"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>
+
+  <script>
+    // JavaScript was here
+  </script>
+</body>
+</html>
